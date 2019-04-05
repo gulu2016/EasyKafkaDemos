@@ -1,11 +1,12 @@
 package Unit8;
 
 import org.apache.kafka.common.config.ConfigDef;
+import org.apache.kafka.common.utils.AppInfoParser;
 import org.apache.kafka.connect.connector.Task;
 import org.apache.kafka.connect.source.SourceConnector;
 
-import java.util.List;
-import java.util.Map;
+import java.net.ConnectException;
+import java.util.*;
 
 /**
  * @ProjectName: EasyKafkaDemos
@@ -25,21 +26,57 @@ public class CustomerFileStreamSourceConnector extends SourceConnector {
     //定义文件配置变量
     public static final String FILE_CONFIG = "file";
 
+    private static final ConfigDef CONFIG_DEF = new ConfigDef()
+            .define(FILE_CONFIG, ConfigDef.Type.STRING, ConfigDef.Importance.HIGH,
+                    "Source filename.")
+            .define(TOPIC_CONFIG, ConfigDef.Type.STRING,
+                    ConfigDef.Importance.HIGH,"The topic to publish data to");
 
+    //声明文件名变量
+    private String filename;
+    //生命主题变量
+    private String topic;
+
+    //获取版本
     public String version() {
-        return null;
+        return AppInfoParser.getVersion();
     }
 
-    public void start(Map<String, String> map) {
+    //开始初始化
+    public void start(Map<String, String> props) {
+        filename = props.get(TOPIC_CONFIG);
+        topic = props.get(TOPIC_CONFIG);
+
+        if(topic == null || topic.isEmpty())
+            try {
+                throw new ConnectException("FileStreamSourceConnector " +
+                        "configuration must include 'topic' setting");
+            } catch (ConnectException e) {
+                e.printStackTrace();
+            }
+        if(topic.contains(","))
+            try {
+                throw new ConnectException("FileStreamSourceConnector " +
+                        "should only have a single topic when used as a source");
+            } catch (ConnectException e) {
+                e.printStackTrace();
+            }
 
     }
+
 
     public Class<? extends Task> taskClass() {
-        return null;
+        return CustomerFileStreamSourceTask.class;
     }
 
-    public List<Map<String, String>> taskConfigs(int i) {
-        return null;
+    public List<Map<String, String>> taskConfigs(int maxTasks) {
+        ArrayList<Map<String,String>> configs = new ArrayList<>();
+        Map<String,String> config = new HashMap<>();
+        if(filename != null)
+            config.put(FILE_CONFIG,filename);
+        config.put(TOPIC_CONFIG,topic);
+        configs.add(config);
+        return configs;
     }
 
     public void stop() {
@@ -47,6 +84,6 @@ public class CustomerFileStreamSourceConnector extends SourceConnector {
     }
 
     public ConfigDef config() {
-        return null;
+        return CONFIG_DEF;
     }
 }
